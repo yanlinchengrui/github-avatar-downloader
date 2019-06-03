@@ -1,7 +1,6 @@
 var request = require('request');
 var fs = require('fs');
-
-var GITHUB_TOKEN = require('./secrets');
+require('dotenv').config();
 
 function getRepoContributors(repoOwner, repoName, cb) {
   // store URL and headers to the parameter
@@ -9,7 +8,7 @@ function getRepoContributors(repoOwner, repoName, cb) {
     url: 'https://api.github.com/repos/' + repoOwner + '/' + repoName + '/contributors',
     headers: {
       'User-Agent': 'request',
-      'Authorization' : GITHUB_TOKEN
+      'Authorization' : 'token ' + process.env.GITHUB_TOKEN
     }
   };
   // request the data
@@ -28,16 +27,7 @@ function downloadImageByURL(url, filePath) {
            .on('error', function (err) {
             throw err;
            })
-           .on('response', function (response) {
-             console.log('Response Status Code:', response.statusCode);
-             console.log('Response Message:', response.statusMessage);
-             console.log('Content Type:', response.headers['content-type']);
-             console.log('Downloading image...');
-           })
-           .pipe(fs.createWriteStream(filePath)
-                   .on('finish', function() {
-                      console.log('Download complete.');
-                    }));
+           .pipe(fs.createWriteStream(filePath));
   }
 }
 
@@ -61,10 +51,13 @@ function callback(err, result) {
       downloadImageByURL(x.url, './avatars/' + x.name + '.jpg');
     }
   );
+  console.log('Download completed.');
+  console.log('Please check your avatars folder.');
 }
 
-if(process.argv.length < 4) {
-  console.log("Parameters should have repoOwner and repoName.");
+// takes two arguments and run the function
+if(process.argv.length !== 4) {
+  console.log("Parameters should only have repoOwner and repoName.");
 }
 else{
   var agrs = process.argv.slice(2);
