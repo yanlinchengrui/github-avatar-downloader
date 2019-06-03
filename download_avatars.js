@@ -1,28 +1,66 @@
 var request = require('request');
+var fs = require('fs');
+
 var GITHUB_TOKEN = require('./secrets');
 
 function getRepoContributors(repoOwner, repoName, cb) {
-
+  // store URL and headers to the parameter
   var options = {
-    url: "https://api.github.com/repos/" + repoOwner + "/" + repoName + "/contributors",
+    url: 'https://api.github.com/repos/' + repoOwner + '/' + repoName + '/contributors',
     headers: {
       'User-Agent': 'request',
       'Authorization' : GITHUB_TOKEN
     }
   };
-
+  // request the data
   request(options, function(err, res, body) {
     cb(err, body);
   });
-
 }
 
-getRepoContributors("jquery", "jquery", function(err, result) {
+function downloadImageByURL(url, filePath) {
+  // check if the file already exists
+  if(fs.existsSync(filePath)){
+    console.log(filePath, 'already exists!');
+  }else{
+    // request the image and save it to the provided path
+    request.get(url)
+           .on('error', function (err) {
+            throw err;
+           })
+           .on('response', function (response) {
+             console.log('Response Status Code:', response.statusCode);
+             console.log('Response Message:', response.statusMessage);
+             console.log('Content Type:', response.headers['content-type']);
+             console.log('Downloading image...');
+           })
+           .pipe(fs.createWriteStream(filePath)
+                   .on('finish', function() {
+                      console.log('Download complete.');
+                    }));
+  }
+}
+
+getRepoContributors('jquery', 'jquery', function(err, result) {
+  // save login and avatar URL to variable contributors
   var contributors = JSON.parse(result).map(
     function (x) {
-      return x.avatar_url;
+      return {
+        name: x.login,
+        url: x.avatar_url
+      }
     }
   );
-  console.log("Errors:", err);
-  console.log("Result:", contributors);
+  // if no directory called avatar exists, create one
+  if(contributors && !fs.existsSync('./avatars')) {
+    fs.mkdirSync('./avatars');
+  }
+  // go through each contributor and get login and avatar url
+  contributors.forEach(
+    function (x) {
+      downloadImageByURL(x.url, './avatars/' + x.name + '.jpg');
+    }
+  )
 });
+
+// downloadImageByURL("https://avatars2.githubusercontent.com/u/2741?v=3&s=466", "avatars/kvirani.jpg");
